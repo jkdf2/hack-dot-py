@@ -1,0 +1,4 @@
+# Nmap 7.01 scan initiated Fri Apr 21 14:44:32 2017 as: nmap -n -Pn -oG example-nmap 172.0.0.1-30
+Host: 172.0.0.1 ()	Status: Up
+Host: 172.0.0.1 ()	Ports: 21/open/tcp//ftp///, 22/open/tcp//ssh///, 53/open/tcp//domain///, 80/open/tcp//http///, 4343/open/tcp//unicall///	Ignored State: closed (995)
+# Nmap done at Fri Apr 21 14:44:36 2017 -- 30 IP addresses (1 host up) scanned in 4.68 seconds

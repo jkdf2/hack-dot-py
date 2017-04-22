@@ -1,0 +1,4 @@
+# Nmap 7.01 scan initiated Fri Apr 21 12:57:01 2017 as: nmap -A -T4 -oG nmap-example scanme.nmap.org
+Host: 45.33.32.156 (scanme.nmap.org)	Status: Up
+Host: 45.33.32.156 (scanme.nmap.org)	Ports: 22/open/tcp//ssh//OpenSSH 6.6.1p1 Ubuntu 2ubuntu2.8 (Ubuntu Linux; protocol 2.0)/, 80/open/tcp//http//Apache httpd 2.4.7 ((Ubuntu))/, 179/filtered/tcp//bgp///, 9929/open/tcp//nping-echo//Nping echo/, 31337/open/tcp//tcpwrapped///	Ignored State: closed (995)	Seq Index: 258	IP ID Seq: All zeros
+# Nmap done at Fri Apr 21 12:57:22 2017 -- 1 IP address (1 host up) scanned in 21.82 seconds
