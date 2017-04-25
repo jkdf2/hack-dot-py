@@ -1,0 +1,137 @@
+# Nmap 7.40 scan initiated Tue Apr 25 09:59:47 2017 as: nmap -A -oA example-taylor-apartment -T4 192.168.1.1-255
+Warning: 192.168.1.133 giving up on port because retransmission cap hit (6).
+Warning: 192.168.1.1 giving up on port because retransmission cap hit (6).
+Warning: 192.168.1.123 giving up on port because retransmission cap hit (6).
+Warning: 192.168.1.198 giving up on port because retransmission cap hit (6).
+Nmap scan report for koolaid.router.lan (192.168.1.1)
+Host is up (0.00098s latency).
+Not shown: 989 closed ports
+PORT     STATE    SERVICE     VERSION
+22/tcp   open     ssh         Dropbear sshd 2014.63 (protocol 2.0)
+53/tcp   open     domain      dnsmasq 2.71
+| dns-nsid: 
+|_  bind.version: dnsmasq-2.71
+80/tcp   open     http        LuCI Lua http config
+|_http-title: Site doesn't have a title (text/html).
+139/tcp  open     netbios-ssn Samba smbd 3.X - 4.X (workgroup: ROUTER)
+445/tcp  open     netbios-ssn Samba smbd 3.6.24 (workgroup: ROUTER)
+636/tcp  filtered ldapssl
+990/tcp  filtered ftps
+1935/tcp filtered rtmp
+4001/tcp filtered newoak
+5000/tcp open     upnp        MiniUPnP 1.8 (OpenWrt Barrier Breaker r42056; UPnP 1.1)
+6005/tcp filtered X11:5
+MAC Address: C8:D3:A3:70:B1:60 (D-Link International)
+Device type: WAP
+Running: Linux 3.X
+OS CPE: cpe:/o:linux:linux_kernel:3.10
+OS details: OpenWrt Barrier Breaker (Linux 3.10)
+Network Distance: 1 hop
+Service Info: OS: Linux; Device: WAP; CPE: cpe:/o:linux:linux_kernel
+
+Host script results:
+|_nbstat: NetBIOS name: OPENWRTSHARE, NetBIOS user: <unknown>, NetBIOS MAC: <unknown> (unknown)
+| smb-os-discovery: 
+|   OS: Unix (Samba 3.6.24)
+|   Computer name: 192
+|   NetBIOS computer name: 
+|   Domain name: 168.1.1
+|   FQDN: 192.168.1.1
+|_  System time: 2017-04-25T10:04:21-05:00
+| smb-security-mode: 
+|   account_used: guest
+|   authentication_level: user
+|   challenge_response: supported
+|_  message_signing: disabled (dangerous, but default)
+|_smbv2-enabled: Server supports SMBv2 protocol
+
+TRACEROUTE
+HOP RTT     ADDRESS
+1   0.98 ms koolaid.router.lan (192.168.1.1)
+
+Nmap scan report for smore.lan (192.168.1.123)
+Host is up (0.0099s latency).
+Not shown: 999 closed ports
+PORT     STATE    SERVICE VERSION
+5060/tcp filtered sip
+MAC Address: DC:09:4C:15:E8:1B (Huawei Technologies)
+Too many fingerprints match this host to give specific OS details
+Network Distance: 1 hop
+
+TRACEROUTE
+HOP RTT     ADDRESS
+1   9.87 ms smore.lan (192.168.1.123)
+
+Nmap scan report for raspberries.lan (192.168.1.133)
+Host is up (0.0064s latency).
+Not shown: 996 closed ports
+PORT     STATE SERVICE VERSION
+22/tcp   open  ssh     (protocol 2.0)
+| fingerprint-strings: 
+|   NULL: 
+|_    SSH-2.0-OpenSSH_7.4p1 Raspbian-10
+| ssh-hostkey: 
+|   2048 1b:c6:6a:a0:d5:23:f6:63:97:e4:fa:4e:02:22:c6:93 (RSA)
+|_  256 79:46:cc:93:46:a4:4a:ba:88:db:db:3a:ac:7d:0f:ed (ECDSA)
+80/tcp   open  http    nginx 1.10.3
+| http-auth: 
+| HTTP/1.1 401 Unauthorized\x0D
+|_  Basic realm=Raspberry Pi Public Media
+|_http-server-header: nginx/1.10.3
+|_http-title: 401 Authorization Required
+111/tcp  open  rpcbind 2-4 (RPC #100000)
+| rpcinfo: 
+|   program version   port/proto  service
+|   100000  2,3,4        111/tcp  rpcbind
+|_  100000  2,3,4        111/udp  rpcbind
+9091/tcp open  http    TwistedWeb httpd 16.6.0
+|_http-server-header: TwistedWeb/16.6.0
+|_http-title: Deluge: Web UI 1.3.13
+1 service unrecognized despite returning data. If you know the service/version, please submit the following fingerprint at https://nmap.org/cgi-bin/submit.cgi?new-service :
+SF-Port22-TCP:V=7.40%I=7%D=4/25%Time=58FF6564%P=x86_64-pc-linux-gnu%r(NULL
+SF:,22,"SSH-2\.0-OpenSSH_7\.4p1\x20Raspbian-10\n");
+MAC Address: 80:1F:02:B5:A5:EF (Edimax Technology)
+Device type: general purpose
+Running: Linux 3.X|4.X
+OS CPE: cpe:/o:linux:linux_kernel:3 cpe:/o:linux:linux_kernel:4
+OS details: Linux 3.2 - 4.6
+Network Distance: 1 hop
+
+TRACEROUTE
+HOP RTT     ADDRESS
+1   6.36 ms raspberries.lan (192.168.1.133)
+
+Nmap scan report for Roths-MBP.lan (192.168.1.198)
+Host is up (0.078s latency).
+Not shown: 926 closed ports, 73 filtered ports
+PORT      STATE SERVICE    VERSION
+28201/tcp open  tcpwrapped
+MAC Address: 80:E6:50:07:07:DC (Apple)
+OS fingerprint not ideal because: Didn't receive UDP response. Please try again with -sSU
+No OS matches for host
+Network Distance: 1 hop
+
+TRACEROUTE
+HOP RTT      ADDRESS
+1   78.21 ms Roths-MBP.lan (192.168.1.198)
+
+Nmap scan report for frozencustard.lan (192.168.1.79)
+Host is up (0.0000040s latency).
+Not shown: 998 closed ports
+PORT    STATE SERVICE VERSION
+80/tcp  open  http    nginx 1.10.3
+|_http-server-header: nginx/1.10.3
+|_http-title: 403 Forbidden
+111/tcp open  rpcbind 2-4 (RPC #100000)
+| rpcinfo: 
+|   program version   port/proto  service
+|   100000  2,3,4        111/tcp  rpcbind
+|_  100000  2,3,4        111/udp  rpcbind
+Device type: general purpose
+Running: Linux 3.X|4.X
+OS CPE: cpe:/o:linux:linux_kernel:3 cpe:/o:linux:linux_kernel:4
+OS details: Linux 3.8 - 4.6
+Network Distance: 0 hops
+
+OS and Service detection performed. Please report any incorrect results at https://nmap.org/submit/ .
+# Nmap done at Tue Apr 25 10:05:35 2017 -- 255 IP addresses (5 hosts up) scanned in 348.42 seconds

@@ -1,0 +1,12 @@
+# Nmap 7.40 scan initiated Tue Apr 25 09:59:47 2017 as: nmap -A -oA example-taylor-apartment -T4 192.168.1.1-255
+Host: 192.168.1.1 (koolaid.router.lan)	Status: Up
+Host: 192.168.1.1 (koolaid.router.lan)	Ports: 22/open/tcp//ssh//Dropbear sshd 2014.63 (protocol 2.0)/, 53/open/tcp//domain//dnsmasq 2.71/, 80/open/tcp//http//LuCI Lua http config/, 139/open/tcp//netbios-ssn//Samba smbd 3.X - 4.X (workgroup: ROUTER)/, 445/open/tcp//netbios-ssn//Samba smbd 3.6.24 (workgroup: ROUTER)/, 636/filtered/tcp//ldapssl///, 990/filtered/tcp//ftps///, 1935/filtered/tcp//rtmp///, 4001/filtered/tcp//newoak///, 5000/open/tcp//upnp//MiniUPnP 1.8 (OpenWrt Barrier Breaker r42056; UPnP 1.1)/, 6005/filtered/tcp//X11:5///	Ignored State: closed (989)	OS: OpenWrt Barrier Breaker (Linux 3.10)	Seq Index: 262	IP ID Seq: All zeros
+Host: 192.168.1.123 (smore.lan)	Status: Up
+Host: 192.168.1.123 (smore.lan)	Ports: 5060/filtered/tcp//sip///	Ignored State: closed (999)
+Host: 192.168.1.133 (raspberries.lan)	Status: Up
+Host: 192.168.1.133 (raspberries.lan)	Ports: 22/open/tcp//ssh//(protocol 2.0)/, 80/open/tcp//http//nginx 1.10.3/, 111/open/tcp//rpcbind//2-4 (RPC #100000)/, 9091/open/tcp//http//TwistedWeb httpd 16.6.0/	Ignored State: closed (996)	OS: Linux 3.2 - 4.6	Seq Index: 260	IP ID Seq: All zeros
+Host: 192.168.1.198 (Roths-MBP.lan)	Status: Up
+Host: 192.168.1.198 (Roths-MBP.lan)	Ports: 28201/open/tcp//tcpwrapped///
+Host: 192.168.1.79 (frozencustard.lan)	Status: Up
+Host: 192.168.1.79 (frozencustard.lan)	Ports: 80/open/tcp//http//nginx 1.10.3/, 111/open/tcp//rpcbind//2-4 (RPC #100000)/	Ignored State: closed (998)	OS: Linux 3.8 - 4.6	Seq Index: 258	IP ID Seq: All zeros
+# Nmap done at Tue Apr 25 10:05:35 2017 -- 255 IP addresses (5 hosts up) scanned in 348.42 seconds
