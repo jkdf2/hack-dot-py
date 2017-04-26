@@ -1,5 +1,8 @@
 #!/usr/bin/python3
 
+import subprocess
+from sets import Set
+
 def parse_arguments():
     pass
 
@@ -11,7 +14,14 @@ def dump_network_info():
     Mary: recommends running nmap BEFORE airodump if applicable because
     nmap in monitor mode may not work correctly.
     """
-    pass
+    out = open("out.txt", "w") 
+    subprocess.call(["nmcli", "-t", "-f", "SSID", "dev", "wifi"], stdout = out)
+    ssids = {}
+    ssids = set()
+    with open("out.txt") as file:
+        for ssid in file:
+            ssids.add(ssid[:-1])
+    # print(ssids)
 
 def create_target_table():
     """
