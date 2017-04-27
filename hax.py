@@ -1,7 +1,6 @@
 #!/usr/bin/python3
 
 import subprocess
-from sets import Set
 from prettytable import PrettyTable
 
 def parse_arguments():
