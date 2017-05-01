@@ -1,15 +1,20 @@
-#!/usr/bin/python3
+#!venv/bin/python
 
 import subprocess
 from prettytable import PrettyTable
+from libnmap.parser import NmapParser
+
+
+FILE_PREFIX = "results"
 
 def parse_arguments():
     pass
 
 def dump_network_info():
     """
-    Saves all output from nmap and airodump-ng scans to a file named
-    TODO: Agree on a file naming convention.
+    Saves all output from nmap and airodump-ng scans to a file.
+    nmap results: FILE_PREFIX.xml
+    airodump results: FILE_PREFIX.csv
     TODO: What should this return or do on FAILURE?
     Mary: recommends running nmap BEFORE airodump if applicable because
     nmap in monitor mode may not work correctly.
