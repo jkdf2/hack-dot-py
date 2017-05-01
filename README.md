@@ -5,7 +5,7 @@ hacking ur wifiz
 Exeuction
 =========
 
-Clone this repository, activate your virtualenv, and install the dependencies with `pip install -r requirements.txt`.
+Clone this repository, activate your virtualenv in a directory called `venv`, and install the dependencies with `pip install -r requirements.txt`.
 
 Then, `sudo ./hax.py` (Note: `sudo` is mandatory for performing all operations.)
 
