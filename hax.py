@@ -3,12 +3,25 @@
 import subprocess
 from prettytable import PrettyTable
 from libnmap.parser import NmapParser
+import os
+import sys
 
 
 FILE_PREFIX = "results"
 
 def parse_arguments():
     pass
+
+def clean_old_results():
+    try:
+        os.remove(FILE_PREFIX + ".xml")
+    except FileNotFoundError:
+        pass
+
+    try:
+        os.remove(FILE_PREFIX + ".csv")
+    except FileNotFoundError:
+        pass
 
 def dump_network_info():
     """
@@ -21,6 +34,9 @@ def dump_network_info():
     """
     # SSID of network user is connected to
     user_ssid = subprocess.Popen(["iwgetid", "-r"], stdout=subprocess.PIPE).communicate()[0].strip()
+    # TODO: Note that iwgetid relies on deprecated iwconfig and does not work in modern Debian.
+    #       Can use nmcli to determine the current network instead?
+
     ssids = subprocess.Popen(["nmcli", "-t", "-f", "SSID", "dev", "wifi"], stdout=subprocess.PIPE).communicate()[0]
     # Remove duplicates
     ssids_set = set(ssids.split('\n'))
@@ -64,6 +80,26 @@ def create_target_table():
     """
 
     # TODO: Parse results from dump_network_info
+    try:
+        with open(FILE_PREFIX + ".csv") as airodump_file:
+            i = 0
+            for line in airodump_file:
+                print("line {}: {}".format(i, line.strip()))
+                i += 1
+    except FileNotFoundError as e:
+        sys.exit("No airodump results found - fatal exception: '{}'".format(e))
+
+    try:
+        nmap_results = NmapParser.parse_fromfile(FILE_PREFIX + ".xml")
+    except Exception as e:
+        nmap_results = None
+        print("Skipping nmap results as NmapParser encountered exception: {}".format(type(e).__name__))
+
+    if nmap_results is not None:
+        print("Info about nmap_results var:")
+        print(type(nmap_results))
+        print(dir(nmap_results))
+        pass
 
     # TODO: What info does Mary need in order to execute attack?
 
@@ -77,7 +113,10 @@ def execute_hack():
 
 if __name__ == "__main__":
     # TODO: Pass variables & arguments as needed
+
+    # TODO: Throw error if user is not using 'sudo'
     parse_arguments()
+    clean_old_results()
     dump_network_info()
     create_target_table()
     print("uber l33t haxxing just happened")
