@@ -13,9 +13,6 @@ MAC_LENGTH  = 6  # The number of octets in a mac address
 def sudo_user():
     return os.getuid() == 0
 
-def parse_arguments():
-    pass
-
 def clean_old_results():
     try:
         os.remove(FILE_PREFIX + ".xml")
@@ -138,10 +135,9 @@ def execute_hack():
     pass
 
 if __name__ == "__main__":
-    # TODO: Pass variables & arguments as needed
     if sudo_user():
-        parse_arguments()
-        # clean_old_results()
+        # TODO: Pass variables & arguments as needed
+        clean_old_results()
         dump_network_info()
         create_target_table()
         print("uber l33t haxxing just happened")
