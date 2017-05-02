@@ -10,6 +10,9 @@ import sys
 FILE_PREFIX = "results"
 MAC_LENGTH  = 6  # The number of octets in a mac address
 
+def sudo_user():
+    return os.getuid() == 0
+
 def parse_arguments():
     pass
 
@@ -136,10 +139,11 @@ def execute_hack():
 
 if __name__ == "__main__":
     # TODO: Pass variables & arguments as needed
-
-    # TODO: Throw error if user is not using 'sudo'
-    parse_arguments()
-    # clean_old_results()
-    dump_network_info()
-    create_target_table()
-    print("uber l33t haxxing just happened")
+    if sudo_user():
+        parse_arguments()
+        # clean_old_results()
+        dump_network_info()
+        create_target_table()
+        print("uber l33t haxxing just happened")
+    else:
+        print("Script requires root access to perform network operations.")
