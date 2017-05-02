@@ -36,7 +36,7 @@ def dump_network_info():
     # Wifi interface
     interface = subprocess.check_output(["nmcli", "-t", "-f", "DEVICE", "connection","show", "--active"]).decode().strip()
     # SSID of network user is connected to
-    sp1 = subprocess.Popen(["iw", "dev", "wlan0", "link"], stdout=subprocess.PIPE)
+    sp1 = subprocess.Popen(["iw", "dev", interface, "link"], stdout=subprocess.PIPE)
     sp2 = subprocess.Popen(["grep", "SSID"], stdin=sp1.stdout, stdout=subprocess.PIPE)
     user_ssid = subprocess.check_output(["cut", "-f2-", "-d:"], stdin=sp2.stdout).decode().strip()
     # TODO: Note that iwgetid relies on deprecated iwconfig and does not work in modern Debian.
