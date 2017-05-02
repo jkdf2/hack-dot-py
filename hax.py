@@ -75,7 +75,6 @@ def dump_network_info():
         print("Done.\n")
     else:
         print("You are not connected to " + victim_network + ".\n")
-        print("victim bssid: " + ssid_dict[victim_network])
 
     # Airodump -- working on this
     print("Enabling monitor mode... ")
@@ -105,7 +104,7 @@ def create_target_table():
 
     # TODO: Parse results from dump_network_info
     try:
-        with open(FILE_PREFIX + ".csv") as airodump_file:
+        with open(FILE_PREFIX + "-01.csv") as airodump_file:
             station_seen = False
             for line in airodump_file:
                 line = list(map(str.strip, line.split(",")))
