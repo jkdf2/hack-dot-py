@@ -8,6 +8,7 @@ import sys
 
 
 FILE_PREFIX = "results"
+MAC_LENGTH  = 6  # The number of octets in a mac address
 
 def parse_arguments():
     pass
@@ -82,10 +83,18 @@ def create_target_table():
     # TODO: Parse results from dump_network_info
     try:
         with open(FILE_PREFIX + ".csv") as airodump_file:
-            i = 0
+            station_seen = False
             for line in airodump_file:
-                print("line {}: {}".format(i, line.strip()))
-                i += 1
+                line = list(map(str.strip, line.split(",")))
+                if len(line[0].split(":")) == MAC_LENGTH:
+                    line.pop()  # Last entry is an empty string
+                    if not station_seen:
+                        # TODO: Parse the SSID here, if needed.
+                        station_seen = True
+                        print("Station info: {}".format(line))
+                    else:
+                        print("Client info: {}".format(line))
+
     except FileNotFoundError as e:
         sys.exit("No airodump results found - fatal exception: '{}'".format(e))
 
@@ -99,7 +108,6 @@ def create_target_table():
         print("Info about nmap_results var:")
         print(type(nmap_results))
         print(dir(nmap_results))
-        pass
 
     # TODO: What info does Mary need in order to execute attack?
 
