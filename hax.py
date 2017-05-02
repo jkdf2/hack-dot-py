@@ -39,8 +39,10 @@ def dump_network_info():
     interface = subprocess.check_output(["nmcli", "-t", "-f", "DEVICE", "connection","show", "--active"]).decode().strip()
     # SSID of network user is connected to
     print("Scanning for wireless networks...")
+    # Sometimes this fails and says "command failed: Device or resource busy (-16)"
     sp1 = subprocess.Popen(["iw", "dev", interface, "link"], stdout=subprocess.PIPE)
     sp2 = subprocess.Popen(["grep", "SSID"], stdin=sp1.stdout, stdout=subprocess.PIPE)
+    # TODO: Handle user not being connected to a network
     user_ssid = subprocess.check_output(["cut", "-f2-", "-d:"], stdin=sp2.stdout).decode().strip()
     # TODO: Note that iwgetid relies on deprecated iwconfig and does not work in modern Debian.
     #       Can use nmcli to determine the current network instead?
@@ -50,9 +52,10 @@ def dump_network_info():
     iw_scan2 = subprocess.Popen(["egrep", "^BSS|SSID:"], stdin=iw_scan1.stdout, stdout=subprocess.PIPE).communicate()[0].decode().strip().splitlines()
     ssid_dict = {}
     for bssid, ssid in zip(iw_scan2[0::2], iw_scan2[1::2]):
-        ssid_dict[ssid[7:]] = bssid[4:21]
+        ssid_dict[ssid.split(":", 1)[1].strip()] = bssid.split(":", 1)[1][0:14]
     # Create enumerated table
     ssids_table = PrettyTable(["*","Option","SSID"])
+    ssids_table.hrules=True
     option_num = 1
     for entry in ssid_dict:
         connected = ""
@@ -71,7 +74,7 @@ def dump_network_info():
         sp = subprocess.Popen(["ip", "addr", "show", interface], stdout=subprocess.PIPE)
         ips = subprocess.check_output(["grep", "inet", "-m", "1"], stdin=sp.stdout).decode()[9:24]
         sp.wait()
-        # Not sure if nmap is working correctly anymore :|
+        # TODO: Check output, log verbosely
         nmap = subprocess.call(["nmap", "-n", "-A", "-oX", FILE_PREFIX+".xml", ips], stdout=subprocess.DEVNULL) # should we print nmap results to screen too?
         print("Done.\n")
     else:
