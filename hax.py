@@ -9,9 +9,10 @@ import time
 
 
 FILE_PREFIX = "results"
+MAC_LENGTH  = 6  # The number of octets in a mac address
 
-def parse_arguments():
-    pass
+def sudo_user():
+    return os.getuid() == 0
 
 def clean_old_results():
     try:
@@ -104,11 +105,19 @@ def create_target_table():
 
     # TODO: Parse results from dump_network_info
     try:
-        with open(FILE_PREFIX + "-01.csv") as airodump_file:
-            i = 0
+        with open(FILE_PREFIX + ".csv") as airodump_file:
+            station_seen = False
             for line in airodump_file:
-                print("line {}: {}".format(i, line.strip()))
-                i += 1
+                line = list(map(str.strip, line.split(",")))
+                if len(line[0].split(":")) == MAC_LENGTH:
+                    line.pop()  # Last entry is an empty string
+                    if not station_seen:
+                        # TODO: Parse the SSID here, if needed.
+                        station_seen = True
+                        print("Station info: {}".format(line))
+                    else:
+                        print("Client info: {}".format(line))
+
     except FileNotFoundError as e:
         sys.exit("No airodump results found - fatal exception: '{}'".format(e))
 
@@ -122,7 +131,6 @@ def create_target_table():
         print("Info about nmap_results var:")
         print(type(nmap_results))
         print(dir(nmap_results))
-        pass
 
     # TODO: What info does Mary need in order to execute attack?
 
@@ -135,11 +143,11 @@ def execute_hack():
     pass
 
 if __name__ == "__main__":
-    # TODO: Pass variables & arguments as needed
-
-    # TODO: Throw error if user is not using 'sudo'
-    parse_arguments()
-    clean_old_results()
-    dump_network_info()
-    create_target_table()
-    print("uber l33t haxxing just happened")
+    if sudo_user():
+        # TODO: Pass variables & arguments as needed
+        clean_old_results()
+        dump_network_info()
+        create_target_table()
+        print("uber l33t haxxing just happened")
+    else:
+        print("Script requires root access to perform network operations.")
