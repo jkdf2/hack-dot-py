@@ -112,7 +112,23 @@ def create_target_table():
     ap = parse_airodump(clients, Client)
     parse_nmap(clients, Client, Service, ap)
 
-    # TODO: Provide a table of clients for the user to pick from.
+    clients_table = PrettyTable(["MAC", "Wifi Card Vendor", "IP Address", "Power", "Services"], hrules=True)
+    # TODO: Sort clients by ip first and then by power
+    # TODO: enumerate rows
+    for c in clients.values():
+        if c.services:
+            services_table = PrettyTable(["Port","State","Service"], border=False)
+            for s in c.services:
+                services_table.add_row([s.port, s.state, s.service])
+        else:
+            services_table = None
+
+        clients_table.add_row([c.mac, c.vendor, c.ip, c.power, services_table])
+
+    print(clients_table)
+
+    # TODO: Take user input for choice of victim client.
+
     # TODO: Should we somehow exclude ourselves from the list of possible victims??
 
     # TODO: What info does Mary need in order to execute attack?
@@ -139,6 +155,7 @@ def parse_airodump(clients, Client):
                         clients[mac] = Client(mac, None, None, power, None)
 
         return ap
+
     except FileNotFoundError as e:
         sys.exit("No airodump results found - fatal exception: '{}'".format(e))
 
