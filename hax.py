@@ -3,6 +3,7 @@
 import subprocess
 from prettytable import PrettyTable
 from libnmap.parser import NmapParser
+from collections import namedtuple
 import os
 import sys
 import time
@@ -102,38 +103,69 @@ def create_target_table():
     all victims by pressing "A"
     """
 
-    # TODO: Parse results from dump_network_info
+    # Client   = namedtuple("Client", ["MAC", "Wifi Card Vendor", "IP Address", "Power", "Services"])
+    Client   = namedtuple("Client", "mac, vendor, ip, power, services")
+    Service  = namedtuple("Service", "port, state, service")
+    clients  = dict()
+
+
+    ap = parse_airodump(clients, Client)
+    parse_nmap(clients, Client, Service, ap)
+
+    # TODO: Provide a table of clients for the user to pick from.
+    # TODO: Should we somehow exclude ourselves from the list of possible victims??
+
+    # TODO: What info does Mary need in order to execute attack?
+    execute_hack()
+
+def parse_airodump(clients, Client):
     try:
         with open(FILE_PREFIX + "-01.csv") as airodump_file:
-            station_seen = False
+            ap_seen = False  # The first MAC we see is the Access Point / Station
             for line in airodump_file:
                 line = list(map(str.strip, line.split(",")))
                 if len(line[0].split(":")) == MAC_LENGTH:
-                    line.pop()  # Last entry is an empty string
-                    if not station_seen:
-                        # TODO: Parse the SSID here, if needed.
-                        station_seen = True
-                        print("Station info: {}".format(line))
+                    line.pop()  # Last entry is an empty string; discard it
+                    if not ap_seen:
+                        ap_seen = True
+                        AP      = namedtuple("AP", "bssid, ssid")
+                        bssid   = line[0]
+                        ssid    = line[-1]
+                        ap      = AP(bssid, ssid)
                     else:
-                        print("Client info: {}".format(line))
+                        # Construct a Client from the airodump information.
+                        mac          = line[0]
+                        power        = line[3]
+                        clients[mac] = Client(mac, None, None, power, None)
 
+        return ap
     except FileNotFoundError as e:
         sys.exit("No airodump results found - fatal exception: '{}'".format(e))
 
+def parse_nmap(clients, Client, Service, ap):
     try:
-        nmap_results = NmapParser.parse_fromfile(FILE_PREFIX + ".xml")
+        nmap_report = NmapParser.parse_fromfile(FILE_PREFIX + ".xml")
     except Exception as e:
-        nmap_results = None
+        nmap_report = None
         print("Skipping nmap results as NmapParser encountered exception: {}".format(type(e).__name__))
 
-    if nmap_results is not None:
-        print("Info about nmap_results var:")
-        print(type(nmap_results))
-        print(dir(nmap_results))
+    if nmap_report is not None:
+        for host in nmap_report.hosts:
+            if host.is_up():
+                if host.services:
+                    services = list()
+                    for service in host.services:
+                        services.append(Service(service.port, service.state, service.service))
+                else:
+                    services = None
 
-    # TODO: What info does Mary need in order to execute attack?
-
-    execute_hack()
+                try:
+                    client = clients[host.mac]
+                    client = client._replace(vendor=host.vendor,ip=host.address,services=services)
+                    clients[host.mac] = client
+                except KeyError:
+                    if host.mac != ap.bssid:
+                        clients[host.mac] = Client(host.mac, host.vendor, host.address, None, services)
 
 def execute_hack():
     """
