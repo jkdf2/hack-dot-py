@@ -32,12 +32,16 @@ def dump_network_info():
     Mary: recommends running nmap BEFORE airodump if applicable because
     nmap in monitor mode may not work correctly.
     """
+    # Wifi interface
+    interface = subprocess.check_output(["nmcli", "-t", "-f", "DEVICE", "connection","show", "--active"]).decode().strip()
     # SSID of network user is connected to
-    user_ssid = subprocess.Popen(["iwgetid", "-r"], stdout=subprocess.PIPE).communicate()[0].strip()
+    sp1 = subprocess.Popen(["iw", "dev", "wlan0", "link"], stdout=subprocess.PIPE)
+    sp2 = subprocess.Popen(["grep", "SSID"], stdin=sp1.stdout, stdout=subprocess.PIPE)
+    user_ssid = subprocess.check_output(["cut", "-f2-", "-d:"], stdin=sp2.stdout).decode().strip()
     # TODO: Note that iwgetid relies on deprecated iwconfig and does not work in modern Debian.
     #       Can use nmcli to determine the current network instead?
 
-    ssids = subprocess.Popen(["nmcli", "-t", "-f", "SSID", "dev", "wifi"], stdout=subprocess.PIPE).communicate()[0]
+    ssids = subprocess.Popen(["nmcli", "-t", "-f", "SSID", "dev", "wifi"], stdout=subprocess.PIPE).communicate()[0].decode()
     # Remove duplicates
     ssids_set = set(ssids.split('\n'))
     # Create table
@@ -56,21 +60,32 @@ def dump_network_info():
     print("* = You are connected to this network -- detailed results available\n")
     # TODO: Deal with bad input
     user_input = input("Choose an SSID to target: ")
-    network = ssids_table.get_string(border=False, header=False, fields=["SSID"], start=user_input-1, end=user_input).strip()
+    network = ssids_table.get_string(border=False, header=False, fields=["SSID"], start=int(user_input)-1, end=int(user_input)).strip()
     if network == user_ssid:
-        print("You are connected to " + network + ". Running nmap...")
+        print("You are connected to " + network + ". Running nmap...", end="")
         # Get IPs
         # TODO: use all interfaces that start with "wl"???
         sp = subprocess.Popen(["ip", "addr", "show", "wlan0"], stdout=subprocess.PIPE)
-        ips = subprocess.check_output(["grep", "inet", "-m", "1"], stdin=sp.stdout)[9:24]
+        ips = subprocess.check_output(["grep", "inet", "-m", "1"], stdin=sp.stdout).decode()[9:24]
         sp.wait()
-        nmap_scan = open("nmap_scan", "w")
-        subprocess.call(["nmap", "-n", "-Pn", "oG", "nmap_scan", ips], stdout = nmap_scan) # should we print nmap results to screen too?
-        nmap_scan.close()
+        subprocess.call(["nmap", "-n", "-A", "-oX", FILE_PREFIX+".xml", ips], stdout=open(os.devnull, 'wb')) # should we print nmap results to screen too?
+        print("Done.\n")
     else:
-        print("You are not connected to " + network + ". ")
+        print("You are not connected to " + network + ".\n")
 
-    # TODO: airodump stuff
+    # Airodump -- working on this
+    # print("Enabling monitor mode... ", end="")
+    # try:
+    #     subprocess.check_output(["sudo", "airmon-ng", "start", interface])
+    #     print("Success")
+    #     airodump = subprocess.Popen(["sudo", "airodump-ng", interface+"mon", "-w", FILE_PREFIX, "-o", "csv"], stdout=subprocess.PIPE) #doesn't work
+    #     o_airodump, unused_stderr = airodump.communicate(timeout=10)
+    #     airodump.kill()
+    #     subprocess.check_output(["sudo", "airmon-ng", "stop", interface+"mon"])
+    #     subprocess.call(["service", "network-manager", "start"])
+    # except subprocess.CalledProcessError as e:
+    #     print ("Failed to enable monitor mode: " + e.output)
+
 
 def create_target_table():
     """
@@ -116,7 +131,7 @@ if __name__ == "__main__":
 
     # TODO: Throw error if user is not using 'sudo'
     parse_arguments()
-    clean_old_results()
+    # clean_old_results()
     dump_network_info()
     create_target_table()
     print("uber l33t haxxing just happened")
