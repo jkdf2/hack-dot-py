@@ -215,7 +215,7 @@ def handle_victims_choices(clients_table, clients):
         print("\n\n\n")
         print(clients_table)
         user_input = input("Who would you like to attack? (Separate " + 
-                           "indices by commas or enter 'A' for all. ").strip()
+                           "indices by commas or enter 'A' for all.) ").strip()
         if user_input.lower() == "a":
             victims = clients
         else:
