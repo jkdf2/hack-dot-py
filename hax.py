@@ -106,7 +106,6 @@ def create_target_table():
     all victims by pressing "A"
     """
 
-    # Client   = namedtuple("Client", ["MAC", "Wifi Card Vendor", "IP Address", "Power", "Services"])
     Client   = namedtuple("Client", "mac, vendor, ip, power, services")
     Service  = namedtuple("Service", "port, state, service")
     clients  = dict()
@@ -115,29 +114,24 @@ def create_target_table():
     ap = parse_airodump(clients, Client)
     parse_nmap(clients, Client, Service, ap)
 
-    clients_table = PrettyTable(["MAC", "Wifi Card Vendor", "IP Address", "Power", "Services"], hrules=True)
-    # TODO: Sort clients by ip first and then by power
-    # TODO: enumerate rows
-    for c in clients.values():
-        if c.services:
-            services_table = PrettyTable(["Port","State","Service"], border=False)
-            for s in c.services:
-                services_table.add_row([s.port, s.state, s.service])
-        else:
-            services_table = None
+    # Create a sorted list of clients by ip first and then by power
+    clients = sorted(clients.values(), key=lambda c: c.ip if c.ip is not None
+                                                     else c.power)
 
-        clients_table.add_row([c.mac, c.vendor, c.ip, c.power, services_table])
+    clients_table = gen_clients_table(clients)
 
-    print(clients_table)
+    victims = handle_victims_choices(clients_table, clients)
 
-    # TODO: Take user input for choice of victim client.
-
-    # TODO: Should we somehow exclude ourselves from the list of possible victims??
-
-    # TODO: What info does Mary need in order to execute attack?
+    # TODO: I have the list of victim clients.
+    #       What info does Mary need in order to execute attack?
     execute_hack()
 
 def parse_airodump(clients, Client):
+    """
+    Iterates through the airodump file, assuming that the first MAC address
+    it encounters is the AP, and those following are clients.
+    Modifies clients in-place and returns the AP.
+    """
     try:
         with open(FILE_PREFIX + "-01.csv") as airodump_file:
             ap_seen = False  # The first MAC we see is the Access Point / Station
@@ -163,6 +157,12 @@ def parse_airodump(clients, Client):
         sys.exit("No airodump results found - fatal exception: '{}'".format(e))
 
 def parse_nmap(clients, Client, Service, ap):
+    """
+    Iterates through the 'up' hosts in the nmap report, modifying the list of
+    clients in-place to add the clients that are:
+    a) Not the access point
+    b) Not myself
+    """
     try:
         nmap_report = NmapParser.parse_fromfile(FILE_PREFIX + ".xml")
     except Exception as e:
@@ -171,7 +171,8 @@ def parse_nmap(clients, Client, Service, ap):
 
     if nmap_report is not None:
         for host in nmap_report.hosts:
-            if host.is_up():
+            myself = (host.mac == "")
+            if host.is_up() and not myself:
                 if host.services:
                     services = list()
                     for service in host.services:
@@ -179,13 +180,55 @@ def parse_nmap(clients, Client, Service, ap):
                 else:
                     services = None
 
-                try:
+                try:  # Try: we already have this client from the airodump results.
                     client = clients[host.mac]
                     client = client._replace(vendor=host.vendor,ip=host.address,services=services)
                     clients[host.mac] = client
-                except KeyError:
+                except KeyError:  # Except: first time seeing this client so generate a new key,value pair
                     if host.mac != ap.bssid:
                         clients[host.mac] = Client(host.mac, host.vendor, host.address, None, services)
+
+def gen_clients_table(clients):
+    """
+    Creates a PrettyTable from a clients list.
+    """
+    clients_table = PrettyTable(["#", "MAC", "Wifi Card Vendor", "IP Address",
+                                 "Power", "Services"], hrules=True)
+    for i,c in enumerate(clients):
+        if c.services:
+            services_table = PrettyTable(["Port","State","Service"], border=False)
+            for s in c.services:
+                services_table.add_row([s.port, s.state, s.service])
+        else:
+            services_table = None
+
+        clients_table.add_row([i, c.mac, c.vendor, c.ip, c.power, services_table])
+    return clients_table
+
+def handle_victims_choices(clients_table, clients):
+    """
+    Returns a list of victims (a subset of the clients) when the user enters
+    valid, comma-separted indices or enters 'A' to target all clients.
+    """
+    victims = []
+    while not victims:
+        print("\n\n\n")
+        print(clients_table)
+        user_input = input("Who would you like to attack? (Separate " + 
+                           "indices by commas or enter 'A' for all. ").strip()
+        if user_input.lower() == "a":
+            victims = clients
+        else:
+            try:
+                victim_indices = list(map(str.strip, user_input.split(",")))
+                victim_indices = map(int, victim_indices)
+                for i in victim_indices:
+                    victims.append(clients[i])
+            except Exception as e:
+                victims = []
+                print("Enter a comma-separated list of numbers or 'A' for all " +
+                       "(exception: {})".format(e))
+
 
 def execute_hack():
     """
