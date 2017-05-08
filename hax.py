@@ -63,6 +63,7 @@ def dump_network_info():
             connected += "*"
         ssids_table.add_row([connected, option_num, entry])
         option_num+=1
+    print(ssids_table)
     print("* = You are connected to this network -- detailed results available\n")
     # TODO: Deal with bad input
     user_input = input("Choose an SSID to target: ")
