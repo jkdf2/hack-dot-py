@@ -52,7 +52,7 @@ def dump_network_info():
     iw_scan2 = subprocess.Popen(["egrep", "^BSS|SSID:"], stdin=iw_scan1.stdout, stdout=subprocess.PIPE).communicate()[0].decode().strip().splitlines()
     ssid_dict = {}
     for bssid, ssid in zip(iw_scan2[0::2], iw_scan2[1::2]):
-        ssid_dict[ssid.split(":", 1)[1].strip()] = bssid.split(":", 1)[1][0:14]
+        ssid_dict[ssid.split(":", 1)[1].strip()] = bssid.split(" ", 1)[1][0:17]
     # Create enumerated table
     ssids_table = PrettyTable(["*","Option","SSID"])
     ssids_table.hrules=True
@@ -63,7 +63,6 @@ def dump_network_info():
             connected += "*"
         ssids_table.add_row([connected, option_num, entry])
         option_num+=1
-    print(ssids_table)
     print("* = You are connected to this network -- detailed results available\n")
     # TODO: Deal with bad input
     user_input = input("Choose an SSID to target: ")
@@ -72,7 +71,9 @@ def dump_network_info():
         print("You are connected to " + victim_network + ". Running nmap... ")
         # Get IPs
         sp = subprocess.Popen(["ip", "addr", "show", interface], stdout=subprocess.PIPE)
-        ips = subprocess.check_output(["grep", "inet", "-m", "1"], stdin=sp.stdout).decode()[9:24]
+        # ips = subprocess.check_output(["grep", "inet", "-m", "1"], stdin=sp.stdout).decode()[9:24]
+        ips = subprocess.check_output(["grep", "inet", "-m", "1"], stdin=sp.stdout).decode()[9:23]
+        print(ips)
         sp.wait()
         # TODO: Check output, log verbosely
         nmap = subprocess.call(["nmap", "-n", "-A", "-oX", FILE_PREFIX+".xml", ips], stdout=subprocess.DEVNULL) # should we print nmap results to screen too?
@@ -82,6 +83,7 @@ def dump_network_info():
 
     # Airodump -- working on this
     print("Enabling monitor mode... ")
+    # print(ssid_dict[victim_network])
     try:
         subprocess.check_output(["sudo", "airmon-ng", "start", interface])
         print("Starting airodump for 10 seconds... ")
