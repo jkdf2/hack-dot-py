@@ -26,7 +26,7 @@ def clean_old_results():
     except FileNotFoundError:
         pass
 
-def dump_network_info():
+def dump_network_info(Info):
     """
     Saves all output from nmap and airodump-ng scans to a file.
     nmap results: FILE_PREFIX.xml
@@ -68,6 +68,9 @@ def dump_network_info():
     # TODO: Deal with bad input
     user_input = input("Choose an SSID to target: ")
     victim_network = ssids_table.get_string(border=False, header=False, fields=["SSID"], start=int(user_input)-1, end=int(user_input)).strip()
+
+    info = Info(interface, victim_network, ssid_dict[victim_network])
+
     if victim_network == user_ssid:
         print("You are connected to " + victim_network + ". Running nmap... ")
         # Get IPs
@@ -84,23 +87,21 @@ def dump_network_info():
 
     # Airodump -- working on this
     print("Enabling monitor mode... ")
-    # print(ssid_dict[victim_network])
     try:
         subprocess.check_output(["sudo", "airmon-ng", "start", interface])
         print("Starting airodump for 10 seconds... ")
         airodump = subprocess.Popen(["sudo", "airodump-ng","--bssid", ssid_dict[victim_network], interface+"mon", "-w", FILE_PREFIX, "-o", "csv"], stdout=subprocess.PIPE, stderr=subprocess.PIPE)
         # After 10 seconds, raise a TimeoutExpired exception to stop airodump
         o_airodump, unused_stderr = airodump.communicate(timeout=10)
-        airodump.terminate()
     except subprocess.CalledProcessError as e:
         print ("Failed to enable monitor mode: " + e.output)
     except subprocess.TimeoutExpired:
         print("Disabling monitor mode... ")
-        subprocess.check_output(["sudo", "airmon-ng", "stop", interface+"mon"])
-        subprocess.call(["service", "network-manager", "start"])
+        airodump.terminate()
         print("Done.\n")
         # Fixes invisible text in terminal & no echo after terminating airodump
         subprocess.call(["stty", "sane"])
+    return info
 
 def create_target_table():
     """
@@ -125,9 +126,7 @@ def create_target_table():
 
     victims = handle_victims_choices(clients_table, clients)
 
-    # TODO: I have the list of victim clients.
-    #       What info does Mary need in order to execute attack?
-    execute_hack()
+    return victims
 
 def parse_airodump(clients, Client):
     """
@@ -220,31 +219,37 @@ def handle_victims_choices(clients_table, clients):
         user_input = input("Who would you like to attack? (Separate " + 
                            "indices by commas or enter 'A' for all.) ").strip()
         if user_input.lower() == "a":
-            victims = clients
+            victims = [client.mac for client in clients]
         else:
             try:
                 victim_indices = list(map(str.strip, user_input.split(",")))
                 victim_indices = map(int, victim_indices)
                 for i in victim_indices:
-                    victims.append(clients[i])
+                    victims.append(clients[i].mac)
             except Exception as e:
                 victims = []
                 print("Enter a comma-separated list of numbers or 'A' for all " +
                        "(exception: {})".format(e))
+    return victims
 
-
-def execute_hack():
+def execute_hack(info, victims):
     """
     Takes some information (WHAT?) in order to attack the victim.
     """
-    pass
+    # print(info.interface)
+    # print(info.ssid)
+    # print(info.bssid)
+    # print(victims)
 
 if __name__ == "__main__":
     if sudo_user():
         # TODO: Pass variables & arguments as needed
+        Info = namedtuple("Info", "interface ssid bssid")
+
         clean_old_results()
-        dump_network_info()
-        create_target_table()
+        info = dump_network_info(Info)
+        victims = create_target_table()
+        execute_hack(info, victims)
         print("uber l33t haxxing just happened")
     else:
         print("Script requires root access to perform network operations.")
