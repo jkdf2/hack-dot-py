@@ -301,6 +301,5 @@ if __name__ == "__main__":
         info = dump_network_info(Info)
         victims = create_target_table()
         execute_hack(info, victims)
-        print("uber l33t haxxing just happened")
     else:
         print("Script requires root access to perform network operations.")
