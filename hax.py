@@ -225,16 +225,20 @@ def handle_victims_choices(clients_table, clients):
     """
     Returns a list of victims (a subset of the clients) when the user enters
     valid, comma-separted indices or enters 'A' to target all clients.
+    Alternatively, the user can enter 'AP' to target the access point.
     """
+    print("\n\n\n")
+    print(clients_table)
+    print("WARNING: A new terminal will be created for each victim chosen when executing attacks.")
     victims = []
     while not victims:
-        print("\n\n\n")
-        print(clients_table)
-        print("WARNING: A new terminal will be created for each victim chosen when executing attacks.")
         user_input = input("Who would you like to attack? (Separate " + 
-                           "indices by commas or enter 'A' for all.) ").strip()
+                           "indices by commas, enter 'A' for all, or 'AP'" + 
+                           " to target the access point.) ").strip()
         if user_input.lower() == "a":
             victims = [client.mac for client in clients]
+        elif user_input.lower() == "ap":
+            return None
         else:
             try:
                 victim_indices = list(map(str.strip, user_input.split(",")))
@@ -249,7 +253,8 @@ def handle_victims_choices(clients_table, clients):
 
 def execute_hack(info, victims):
     """
-    Takes some information (WHAT?) in order to attack the victim.
+    Takes network information and selected victims in order to
+    attack the victims or, if victims is false-ish, attacks the Access Point.
     """
 
     # Get channel
