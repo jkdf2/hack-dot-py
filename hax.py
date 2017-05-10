@@ -73,7 +73,7 @@ def dump_network_info(Info):
         ips = subprocess.check_output(["grep", "inet", "-m", "1"], stdin=sp.stdout).decode()[9:26]
         # print(ips)
         sp.wait()
-        nmap = subprocess.call(["nmap", "-T4", "-n", "-sV", "-oX", FILE_PREFIX+".xml", ips], stdout=subprocess.DEVNULL) # should we print nmap results to screen too?
+        nmap = subprocess.call(["nmap", "--version-light", "-F", "-T4", "-n", "-sV", "-oX", FILE_PREFIX+".xml", ips], stdout=subprocess.DEVNULL) # should we print nmap results to screen too?
         print("Done.\n")
     else:
         print("You are not connected to " + victim_network + ".\n")
