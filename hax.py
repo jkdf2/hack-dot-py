@@ -202,6 +202,7 @@ def gen_clients_table(clients, nmap_success):
     else:
         clients_table = PrettyTable(["#", "MAC", "Wifi Card Vendor", "Power"], hrules=True)
 
+    services_table = None
     for i,c in enumerate(clients):
         if c.services:
             services_table = PrettyTable(["Port","State","Service"], border=False)
@@ -213,11 +214,10 @@ def gen_clients_table(clients, nmap_success):
         except Exception as e:
             manuf = subprocess.check_output(["python", "manuf.py", c.mac]).decode().split("comment=")[1][:-2]
 
-
-        if nmap_success and c.services:
+        if nmap_success:
             clients_table.add_row([i, c.mac, manuf, c.ip, c.power, services_table])
         else:
-            clients_table.add_row([i, c.mac, manuf, None, c.power, None])
+            clients_table.add_row([i, c.mac, manuf, c.power])
 
     return clients_table
 
