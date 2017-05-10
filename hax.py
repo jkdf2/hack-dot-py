@@ -71,7 +71,7 @@ def dump_network_info(Info):
         # Get IPs
         sp = subprocess.Popen(["ip", "addr", "show", interface], stdout=subprocess.PIPE)
         ips = subprocess.check_output(["grep", "inet", "-m", "1"], stdin=sp.stdout).decode()[9:26]
-        print(ips)
+        # print(ips)
         sp.wait()
         nmap = subprocess.call(["nmap", "-T4", "-n", "-sV", "-oX", FILE_PREFIX+".xml", ips], stdout=subprocess.DEVNULL) # should we print nmap results to screen too?
         print("Done.\n")
@@ -217,7 +217,7 @@ def gen_clients_table(clients, nmap_success):
         if nmap_success and c.services:
             clients_table.add_row([i, c.mac, manuf, c.ip, c.power, services_table])
         else:
-            clients_table.add_row([i, c.mac, manuf, c.power])
+            clients_table.add_row([i, c.mac, manuf, None, c.power, None])
 
     return clients_table
 
